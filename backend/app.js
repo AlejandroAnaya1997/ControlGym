@@ -88,3 +88,43 @@ app.get('/health', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Servidor ControlGym escuchando en http://localhost:${PORT}`);
 });
+
+
+
+
+
+
+// GCP-HU11: Registrar marcaje automático de asistencia CAMILA COLLAZOS
+app.post('/asistencias', (req, res) => {
+  const { id_usuario } = req.body;
+
+  if (!id_usuario) {
+    return res.status(400).json({ error: 'El ID de usuario es requerido.' });
+  }
+
+  const sql = `INSERT INTO asistencia (id_usuario, estado_ingreso) VALUES (?, 'PERMITIDO')`;
+  db.run(sql, [id_usuario], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.status(201).json({
+      id: this.lastID,
+      id_usuario,
+      estado_ingreso: 'PERMITIDO',
+      fecha_ingreso: new Date()
+    });
+  });
+});
+
+// GCP-HU13: Algoritmo de detección de vencimientos a 5 días exactos
+app.get('/membresias/vencimientos-5dias', (req, res) => {
+  const sql = `
+    SELECT m.id, m.tipo_plan, m.fecha_fin, u.nombre, u.telefono 
+    FROM membresia m
+    JOIN usuario u ON m.id_usuario = u.id
+    WHERE m.fecha_fin = DATE('now', '+5 days') AND m.estado = 'ACTIVO'
+  `;
+
+  db.all(sql, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
