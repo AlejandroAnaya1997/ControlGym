@@ -88,3 +88,55 @@ app.get('/health', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Servidor ControlGym escuchando en http://localhost:${PORT}`);
 });
+
+// GCP-HU04: Registrar nuevo afiliado (USUARIO)
+app.post('/usuarios', (req, res) => {
+  const { cedula, nombre, telefono, contacto_emergencia, foto_url } = req.body;
+
+  if (!cedula || !nombre || !telefono) {
+    return res.status(400).json({ error: 'Cédula, nombre y teléfono son obligatorios.' });
+  }
+
+  const sql = `INSERT INTO usuario (cedula, nombre, telefono, contacto_emergencia, foto_url) VALUES (?, ?, ?, ?, ?)`;
+  db.run(sql, [cedula, nombre, telefono, contacto_emergencia || null, foto_url || null], function (err) {
+    if (err) {
+      if (err.message.includes('UNIQUE constraint failed')) {
+        return res.status(400).json({ error: 'La cédula ya se encuentra registrada.' });
+      }
+      return res.status(500).json({ error: err.message });
+    }
+    res.status(201).json({ id: this.lastID, cedula, nombre, telefono, contacto_emergencia, foto_url });
+  });
+});
+
+// GCP-HU07: Asignar plan de membresía
+app.post('/membresias', (req, res) => {
+  const { id_usuario, tipo_plan } = req.body;
+
+  if (!id_usuario || !['Mensual', 'Trimestral', 'Anual'].includes(tipo_plan)) {
+    return res.status(400).json({ error: 'Usuario y tipo de plan válido (Mensual, Trimestral, Anual) son requeridos.' });
+  }
+
+  const fechaInicio = new Date();
+  const fechaFin = new Date(fechaInicio);
+
+  if (tipo_plan === 'Mensual') fechaFin.setMonth(fechaFin.getMonth() + 1);
+  if (tipo_plan === 'Trimestral') fechaFin.setMonth(fechaFin.getMonth() + 3);
+  if (tipo_plan === 'Anual') fechaFin.setFullYear(fechaFin.getFullYear() + 1);
+
+  const fInicioStr = fechaInicio.toISOString().split('T')[0];
+  const fFinStr = fechaFin.toISOString().split('T')[0];
+
+  const sql = `INSERT INTO membresia (id_usuario, tipo_plan, fecha_inicio, fecha_fin, estado) VALUES (?, ?, ?, ?, 'ACTIVO')`;
+  db.run(sql, [id_usuario, tipo_plan, fInicioStr, fFinStr], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.status(201).json({
+      id: this.lastID,
+      id_usuario,
+      tipo_plan,
+      fecha_inicio: fInicioStr,
+      fecha_fin: fFinStr,
+      estado: 'ACTIVO'
+    });
+  });
+});
