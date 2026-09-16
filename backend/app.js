@@ -89,10 +89,91 @@ app.listen(PORT, () => {
   console.log(`Servidor ControlGym escuchando en http://localhost:${PORT}`);
 });
 
+// ==========================================
+// RUTAS GET (PARA VISUALIZAR DATOS EN NAVEGADOR)
+// ==========================================
 
+// Endpoint de verificación
+app.get('/health', (req, res) => {
+  res.json({ estado: 'OK', mensaje: 'Servidor ControlGym funcionando correctamente' });
+});
 
+// Ver todos los usuarios
+app.get('/usuarios', (req, res) => {
+  db.all(`SELECT * FROM usuario`, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
 
+// Ver todas las membresías
+app.get('/membresias', (req, res) => {
+  db.all(`SELECT m.*, u.nombre FROM membresia m JOIN usuario u ON m.id_usuario = u.id`, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
 
+// Ver todas las asistencias
+app.get('/asistencias', (req, res) => {
+  db.all(`SELECT a.*, u.nombre FROM asistencia a JOIN usuario u ON a.id_usuario = u.id`, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+// GCP-HU04: Registrar nuevo afiliado (USUARIO)
+app.post('/usuarios', (req, res) => {
+  const { cedula, nombre, telefono, contacto_emergencia, foto_url } = req.body;
+
+  
+  if (!cedula || !nombre || !telefono) {
+    return res.status(400).json({ error: 'Cédula, nombre y teléfono son obligatorios.' });
+  }
+
+  const sql = `INSERT INTO usuario (cedula, nombre, telefono, contacto_emergencia, foto_url) VALUES (?, ?, ?, ?, ?)`;
+  db.run(sql, [cedula, nombre, telefono, contacto_emergencia || null, foto_url || null], function (err) {
+    if (err) {
+      if (err.message.includes('UNIQUE constraint failed')) {
+        return res.status(400).json({ error: 'La cédula ya se encuentra registrada.' });
+      }
+      return res.status(500).json({ error: err.message });
+    }
+    res.status(201).json({ id: this.lastID, cedula, nombre, telefono, contacto_emergencia, foto_url });
+  });
+});
+
+// GCP-HU07: Asignar plan de membresía
+app.post('/membresias', (req, res) => {
+  const { id_usuario, tipo_plan } = req.body;
+
+  if (!id_usuario || !['Mensual', 'Trimestral', 'Anual'].includes(tipo_plan)) {
+    return res.status(400).json({ error: 'Usuario y tipo de plan válido (Mensual, Trimestral, Anual) son requeridos.' });
+  }
+
+  const fechaInicio = new Date();
+  const fechaFin = new Date(fechaInicio);
+
+  if (tipo_plan === 'Mensual') fechaFin.setMonth(fechaFin.getMonth() + 1);
+  if (tipo_plan === 'Trimestral') fechaFin.setMonth(fechaFin.getMonth() + 3);
+  if (tipo_plan === 'Anual') fechaFin.setFullYear(fechaFin.getFullYear() + 1);
+
+  const fInicioStr = fechaInicio.toISOString().split('T')[0];
+  const fFinStr = fechaFin.toISOString().split('T')[0];
+
+  const sql = `INSERT INTO membresia (id_usuario, tipo_plan, fecha_inicio, fecha_fin, estado) VALUES (?, ?, ?, ?, 'ACTIVO')`;
+  db.run(sql, [id_usuario, tipo_plan, fInicioStr, fFinStr], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.status(201).json({
+      id: this.lastID,
+      id_usuario,
+      tipo_plan,
+      fecha_inicio: fInicioStr,
+      fecha_fin: fFinStr,
+      estado: 'ACTIVO'
+    });
+  });
+});
 
 // GCP-HU11: Registrar marcaje automático de asistencia CAMILA COLLAZOS
 app.post('/asistencias', (req, res) => {
