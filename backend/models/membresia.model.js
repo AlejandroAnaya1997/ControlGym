@@ -6,9 +6,28 @@ const MembresiaModel = {
     const sql = `INSERT INTO membresia (id_usuario, tipo_plan, fecha_inicio, fecha_fin, estado) VALUES (?, ?, ?, ?, 'ACTIVO')`;
     db.run(sql, [id_usuario, tipo_plan, fInicioStr, fFinStr], callback);
   },
+  desactivarAnteriores: (id_usuario, callback) => {
+    const sql = `UPDATE membresia SET estado = 'CANCELADO' WHERE id_usuario = ? AND estado = 'ACTIVO'`;
+    db.run(sql, [id_usuario], callback);
+  },
   obtenerTodas: (callback) => {
-    const sql = `SELECT m.*, u.nombre FROM membresia m JOIN usuario u ON m.id_usuario = u.id`;
+    const sql = `
+      SELECT m.*, u.nombre, u.cedula 
+      FROM membresia m 
+      JOIN usuario u ON m.id_usuario = u.id
+      ORDER BY m.id DESC
+    `;
     db.all(sql, [], callback);
+  },
+  obtenerPorUsuario: (id_usuario, callback) => {
+    const sql = `
+      SELECT m.*, u.nombre, u.cedula 
+      FROM membresia m 
+      JOIN usuario u ON m.id_usuario = u.id
+      WHERE m.id_usuario = ?
+      ORDER BY m.id DESC
+    `;
+    db.all(sql, [id_usuario], callback);
   },
   obtenerVencimientos5Dias: (callback) => {
     const sql = `

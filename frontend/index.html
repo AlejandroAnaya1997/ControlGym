@@ -1,14 +1,357 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ControlGym - FitZone Popayán</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ControlGym - FitZone Popayán | Gestión de Afiliados y Membresías</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h1>Sistema de ControlGym - FitZone Popayán</h1>
-    <div id="estado-servidor">Cargando estado del servidor...</div>
 
-    <script src="script.js"></script>
+  <!-- Barra de Navegación -->
+  <header class="navbar">
+    <div class="brand">
+      <div class="brand-logo">⚡</div>
+      <div class="brand-text">
+        <h1>FitZone Popayán</h1>
+        <p>ControlGym &bull; Épica 2: Afiliados y Membresías</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div id="estado-servidor" class="server-status">
+        <span class="status-dot"></span>
+        <span id="texto-estado">Conectando...</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Contenedor Principal -->
+  <main class="container">
+    
+    <!-- Fila de Estadísticas Rápidas -->
+    <section class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-info">
+          <h3>Total Afiliados</h3>
+          <div class="stat-value" id="stat-total-afiliados">0</div>
+        </div>
+        <div class="stat-icon green">👥</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-info">
+          <h3>Membresías Activas</h3>
+          <div class="stat-value" id="stat-activas">0</div>
+        </div>
+        <div class="stat-icon blue">💳</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-info">
+          <h3>Sin Plan / Vencidas</h3>
+          <div class="stat-value" id="stat-vencidas">0</div>
+        </div>
+        <div class="stat-icon amber">⏳</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-info">
+          <h3>Pagos Procesados</h3>
+          <div class="stat-value" id="stat-total-pagos">$0</div>
+        </div>
+        <div class="stat-icon purple">🧾</div>
+      </div>
+    </section>
+
+    <!-- Barra Centralizada de Búsqueda y Acciones (HU06) -->
+    <section class="toolbar">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input 
+          type="text" 
+          id="input-busqueda" 
+          class="search-input" 
+          placeholder="Buscar clientes por cédula o nombre en tiempo real..."
+          autocomplete="off"
+        >
+        <button id="btn-limpiar-busqueda" class="btn-clear-search">&times;</button>
+      </div>
+      <button id="btn-abrir-registro" class="btn btn-primary">
+        <span>+</span> Registrar Nuevo Afiliado
+      </button>
+    </section>
+
+    <!-- Lista / Cuadrícula de Afiliados (HU06) -->
+    <section id="contenedor-afiliados" class="affiliates-grid">
+      <div class="empty-state">
+        <div class="empty-icon">⏳</div>
+        <h3>Cargando afiliados...</h3>
+        <p>Obteniendo registros del sistema FitZone Popayán.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== MODALES ==================== -->
+
+  <!-- MODAL HU04: REGISTRO DE NUEVO AFILIADO -->
+  <div id="modal-registro" class="modal-overlay">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h2>Registro de Nuevo Afiliado</h2>
+        <button class="btn-close-modal" data-close="modal-registro">&times;</button>
+      </div>
+      <form id="form-registro" class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="reg-cedula">Cédula de Ciudadanía <span class="required">*</span></label>
+          <input type="text" id="reg-cedula" class="form-input" placeholder="Ej: 1061987654" required>
+          <div class="form-hint">Verificación automática de unicidad.</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="reg-nombre">Nombre Completo <span class="required">*</span></label>
+          <input type="text" id="reg-nombre" class="form-input" placeholder="Ej: Valeria Gómez Rivera" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="reg-telefono">Teléfono (Formato Internacional) <span class="required">*</span></label>
+          <input type="tel" id="reg-telefono" class="form-input" placeholder="Ej: +573123456789" required>
+          <div class="form-hint">Debe iniciar con '+' y código de país (ej. +57 para Colombia).</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="reg-contacto-emergencia">Contacto de Emergencia <span class="required">*</span></label>
+          <input type="text" id="reg-contacto-emergencia" class="form-input" placeholder="Ej: Mamá (+573104567890)" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Fotografía del Afiliado <span class="required">*</span></label>
+          <div class="photo-uploader-box">
+            <img id="reg-foto-preview" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" alt="Vista previa" class="photo-preview-img">
+            <div class="photo-uploader-controls">
+              <input type="file" id="reg-foto-file" accept="image/*" class="form-input" style="padding: 0.4rem;">
+              <input type="text" id="reg-foto-url" class="form-input" placeholder="O pega una URL de foto directa">
+            </div>
+          </div>
+          <div class="form-hint">La fotografía es obligatoria para la identificación y control de acceso.</div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.8rem; margin-top: 1.5rem;">
+          <button type="button" class="btn btn-secondary" data-close="modal-registro">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Dar de Alta Afiliado</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL HU05: EDICIÓN DE PERFIL -->
+  <div id="modal-edicion" class="modal-overlay">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h2>Editar Perfil del Afiliado</h2>
+        <button class="btn-close-modal" data-close="modal-edicion">&times;</button>
+      </div>
+      <form id="form-edicion" class="modal-body">
+        <input type="hidden" id="edit-id">
+
+        <div class="form-group">
+          <label class="form-label">Cédula</label>
+          <input type="text" id="edit-cedula" class="form-input" disabled style="opacity: 0.6; cursor: not-allowed;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-nombre">Nombre Completo <span class="required">*</span></label>
+          <input type="text" id="edit-nombre" class="form-input" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-telefono">Teléfono (Formato Internacional) <span class="required">*</span></label>
+          <input type="tel" id="edit-telefono" class="form-input" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-contacto-emergencia">Contacto de Emergencia <span class="required">*</span></label>
+          <input type="text" id="edit-contacto-emergencia" class="form-input" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Sustituir Fotografía <span class="required">*</span></label>
+          <div class="photo-uploader-box">
+            <img id="edit-foto-preview" src="" alt="Vista previa" class="photo-preview-img">
+            <div class="photo-uploader-controls">
+              <input type="file" id="edit-foto-file" accept="image/*" class="form-input" style="padding: 0.4rem;">
+              <input type="text" id="edit-foto-url" class="form-input" placeholder="O pega una URL de foto">
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.8rem; margin-top: 1.5rem;">
+          <button type="button" class="btn btn-secondary" data-close="modal-edicion">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL HU07: ASIGNACIÓN DE PLAN DE MEMBRESÍA -->
+  <div id="modal-plan" class="modal-overlay">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h2>Asignar Plan de Membresía</h2>
+        <button class="btn-close-modal" data-close="modal-plan">&times;</button>
+      </div>
+      <form id="form-plan" class="modal-body">
+        <input type="hidden" id="plan-id-usuario">
+
+        <div class="form-group">
+          <label class="form-label">Afiliado Destino</label>
+          <input type="text" id="plan-nombre-usuario" class="form-input" disabled style="opacity: 0.8; font-weight: bold;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="plan-tipo">Modalidad del Plan <span class="required">*</span></label>
+          <select id="plan-tipo" class="form-select" required>
+            <option value="Mensual">Mensual (Vigencia 1 Mes)</option>
+            <option value="Trimestral">Trimestral (Vigencia 3 Meses)</option>
+            <option value="Anual">Anual (Vigencia 1 Año)</option>
+          </select>
+        </div>
+
+        <!-- Cálculo automático de fechas y vigencia (HU07) -->
+        <div class="plan-calculation-preview">
+          <div class="plan-calc-row">
+            <span>Fecha Inicio (Hoy):</span>
+            <strong id="preview-fecha-inicio">-</strong>
+          </div>
+          <div class="plan-calc-row">
+            <span>Fecha Vencimiento Calculada:</span>
+            <strong id="preview-fecha-fin" style="color: #34d399;">-</strong>
+          </div>
+          <div class="plan-calc-row">
+            <span>Estado asignado:</span>
+            <strong style="color: #34d399;">ACTIVO</strong>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.8rem; margin-top: 1.5rem;">
+          <button type="button" class="btn btn-secondary" data-close="modal-plan">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Activar y Asignar Plan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL HU08: COBRO Y PROCESAMIENTO DE PAGO -->
+  <div id="modal-pago" class="modal-overlay">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h2>Cobro de Membresía &bull; Facturación</h2>
+        <button class="btn-close-modal" data-close="modal-pago">&times;</button>
+      </div>
+      <form id="form-pago" class="modal-body">
+        <input type="hidden" id="pago-id-usuario">
+        <input type="hidden" id="pago-id-membresia">
+
+        <div class="form-group">
+          <label class="form-label">Afiliado</label>
+          <input type="text" id="pago-nombre-usuario" class="form-input" disabled style="opacity: 0.8; font-weight: bold;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Plan a Cobrar</label>
+          <input type="text" id="pago-plan-usuario" class="form-input" disabled style="opacity: 0.8;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="pago-monto">Monto a Cobrar (COP) <span class="required">*</span></label>
+          <input type="number" id="pago-monto" class="form-input" placeholder="Ej: 80000" min="1" step="500" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="pago-metodo">Método de Pago <span class="required">*</span></label>
+          <select id="pago-metodo" class="form-select" required>
+            <option value="Efectivo">Efectivo</option>
+            <option value="Tarjeta">Tarjeta de Crédito / Débito</option>
+            <option value="Transferencia">Transferencia Bancaria (Nequi / Bancolombia / Daviplata)</option>
+          </select>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.8rem; margin-top: 1.5rem;">
+          <button type="button" class="btn btn-secondary" data-close="modal-pago">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Procesar Cobro e Imprimir</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL HU08: COMPROBANTE DIGITAL DE PAGO (IMPRIMIBLE) -->
+  <div id="modal-comprobante" class="modal-overlay">
+    <div class="modal-container" style="max-width: 520px;">
+      <div class="modal-header">
+        <h2>Comprobante Digital</h2>
+        <button class="btn-close-modal" data-close="modal-comprobante">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="recibo-voucher" class="receipt-wrapper">
+          <div class="receipt-header">
+            <h2>FITZONE POPAYÁN</h2>
+            <p>NIT: 900.123.456-7 &bull; Popayán, Cauca</p>
+            <p>Carrera 6 # 15N-32 &bull; Tel: +57 312 888 9900</p>
+            <p style="font-weight: bold; margin-top: 0.4rem;" id="recibo-numero">FZP-2026-00001</p>
+          </div>
+
+          <div class="receipt-meta">
+            <div>
+              <strong>Fecha y Hora:</strong><br>
+              <span id="recibo-fecha">-</span>
+            </div>
+            <div style="text-align: right;">
+              <strong>Método:</strong><br>
+              <span id="recibo-metodo">Efectivo</span>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 1rem; font-size: 0.85rem; border-bottom: 1px solid #111; padding-bottom: 0.5rem;">
+            <strong>Afiliado:</strong> <span id="recibo-cliente">-</span><br>
+            <strong>Cédula:</strong> <span id="recibo-cedula">-</span>
+          </div>
+
+          <table class="receipt-table">
+            <thead>
+              <tr>
+                <th>Concepto</th>
+                <th style="text-align: right;">Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td id="recibo-concepto">Membresía FitZone</td>
+                <td style="text-align: right;" id="recibo-subtotal">$0</td>
+              </tr>
+              <tr class="receipt-total-row">
+                <td>TOTAL PAGADO</td>
+                <td style="text-align: right;" id="recibo-total">$0</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="receipt-footer">
+            <p>¡Gracias por entrenar con FitZone Popayán!</p>
+            <p>Conserva este comprobante para control de ingreso.</p>
+          </div>
+        </div>
+
+        <div class="receipt-print-actions" style="display: flex; justify-content: flex-end; gap: 0.8rem; margin-top: 1.5rem;">
+          <button type="button" class="btn btn-secondary" data-close="modal-comprobante">Cerrar</button>
+          <button type="button" class="btn btn-primary" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenedor para Notificaciones Toast -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="script.js"></script>
 </body>
 </html>

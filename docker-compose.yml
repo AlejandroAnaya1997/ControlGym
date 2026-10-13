@@ -1,0 +1,19 @@
+services:
+  backend:
+    build: ./backend
+    container_name: controlgym_backend
+    ports:
+      - "3000:3000"
+    volumes:
+      # Monta directamente el archivo local de la carpeta backend
+      - ./backend/database.sqlite:/app/database.sqlite
+    restart: always
+
+  frontend:
+    build: ./frontend
+    container_name: controlgym_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always
