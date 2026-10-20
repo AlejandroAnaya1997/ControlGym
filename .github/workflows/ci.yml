@@ -20,8 +20,7 @@ jobs:
             cd /root/projects/electivaVNocturno/equipo-3/controlgym
             git fetch
             git checkout ${{ secrets.MAIN_BRANCH}}
-            git pull origin main
-            cd apolobyte_web_page
-            npm i
-            npm run build
+            git pull origin ${{ secrets.MAIN_BRANCH}}
+            docker compose down
+            docker compose --env-file backend/.env up --build -s
             exit
