@@ -10,12 +10,49 @@ const PRECIOS_PLANES = {
   Anual: 750000
 };
 
+// ==================== UTILIDADES DE RESPUESTA Y FORMATO ====================
+async function parsearRespuestaJson(res, mensajeFallback = "Error en la solicitud") {
+  const contentType = res.headers.get("content-type");
+  if (contentType && contentType.includes("application/json")) {
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || mensajeFallback);
+    }
+    return data;
+  } else {
+    const texto = await res.text();
+    if (!res.ok) {
+      throw new Error(`Error del servidor (${res.status}): ${texto.length > 80 ? texto.substring(0, 80) + '...' : (texto || mensajeFallback)}`);
+    }
+    return { mensaje: texto };
+  }
+}
+
+function formatearFecha(fechaStr) {
+  if (!fechaStr) return "N/A";
+  try {
+    const parteFecha = fechaStr.includes("T") ? fechaStr.split("T")[0] : fechaStr.split(" ")[0];
+    const partes = parteFecha.split("-");
+    if (partes.length === 3) {
+      const [año, mes, dia] = partes;
+      return `${dia}/${mes}/${año}`;
+    }
+    return new Date(fechaStr).toLocaleDateString("es-CO");
+  } catch (e) {
+    return fechaStr;
+  }
+}
+
+
 // ==================== INICIALIZACIÓN ====================
 document.addEventListener("DOMContentLoaded", () => {
   verificarEstadoServidor();
   cargarAfiliados();
   cargarEstadisticasPagos();
   configurarEventos();
+  configurarTabs();
+  configurarControlAcceso();
+  configurarFiltrosHistorial();
 });
 
 // ==================== EVENTOS Y MODALES ====================
@@ -133,16 +170,19 @@ async function verificarEstadoServidor() {
 }
 
 // ==================== HU06: BÚSQUEDA Y LISTADO DINÁMICO ====================
-async function cargarAfiliados(termino = "") {
+async function cargarAfiliados(termino = null) {
   const contenedor = document.getElementById("contenedor-afiliados");
   try {
-    const url = termino ? `${API_BASE}/usuarios?buscar=${encodeURIComponent(termino)}` : `${API_BASE}/usuarios`;
+    const inputBusqueda = document.getElementById("input-busqueda");
+    const filtro = termino !== null ? termino : (inputBusqueda ? inputBusqueda.value.trim() : "");
+    const url = filtro ? `${API_BASE}/usuarios?buscar=${encodeURIComponent(filtro)}` : `${API_BASE}/usuarios`;
     const res = await fetch(url);
     if (!res.ok) throw new Error("Error al obtener afiliados");
-    listaAfiliados = await res.json();
+    listaAfiliados = await parsearRespuestaJson(res, "Error al obtener lista de afiliados");
 
     actualizarEstadisticas(listaAfiliados);
     renderizarAfiliados(listaAfiliados);
+    return listaAfiliados;
   } catch (error) {
     contenedor.innerHTML = `
       <div class="empty-state">
@@ -151,6 +191,7 @@ async function cargarAfiliados(termino = "") {
         <p>${error.message}</p>
       </div>
     `;
+    return [];
   }
 }
 
@@ -173,7 +214,7 @@ function renderizarAfiliados(afiliados) {
     const estado = u.estado_membresia || "SIN MEMBRESÍA";
     const badgeClase = estado === "ACTIVO" ? "activo" : (estado === "VENCIDO" ? "vencido" : "sin-membresia");
     const plan = u.plan_actual || "Sin plan asignado";
-    const vencimiento = u.fecha_fin_membresia ? new Date(u.fecha_fin_membresia).toLocaleDateString("es-CO") : "N/A";
+    const vencimiento = formatearFecha(u.fecha_fin_membresia);
 
     return `
       <article class="affiliate-card">
@@ -279,14 +320,11 @@ async function manejarRegistroAfiliado(e) {
       })
     });
 
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || "No se pudo registrar el afiliado.");
-    }
+    const data = await parsearRespuestaJson(res, "No se pudo registrar el afiliado.");
 
     cerrarModal("modal-registro");
     mostrarToast(`¡Afiliado ${nombre} registrado exitosamente!`);
-    cargarAfiliados();
+    await cargarAfiliados();
 
     // Invitar a asignar membresía
     setTimeout(() => {
@@ -346,12 +384,11 @@ async function manejarEdicionAfiliado(e) {
       })
     });
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Error al actualizar perfil.");
+    const data = await parsearRespuestaJson(res, "Error al actualizar perfil.");
 
     cerrarModal("modal-edicion");
     mostrarToast(data.mensaje || "Perfil actualizado exitosamente.");
-    cargarAfiliados();
+    await cargarAfiliados();
   } catch (error) {
     mostrarToast(error.message, "error");
   }
@@ -396,17 +433,18 @@ async function manejarAsignacionPlan(e) {
       body: JSON.stringify({ id_usuario, tipo_plan })
     });
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Error al asignar membresía.");
+    const data = await parsearRespuestaJson(res, "Error al asignar membresía.");
 
     cerrarModal("modal-plan");
     mostrarToast(data.mensaje || `Plan ${tipo_plan} activado correctamente.`);
-    cargarAfiliados();
+    
+    // Recargar inmediatamente los afiliados para reflejar el plan asignado en el dashboard
+    await cargarAfiliados();
 
-    // Abrir automáticamente el modal de cobro (HU08)
+    // Abrir automáticamente el modal de cobro (HU08) con los datos del plan recién asignado
     setTimeout(() => {
       prepararCobro(id_usuario, data.id, tipo_plan);
-    }, 400);
+    }, 300);
 
   } catch (error) {
     mostrarToast(error.message, "error");
@@ -425,7 +463,8 @@ function prepararCobro(idUsuario, idMembresia = null, tipoPlan = null) {
   document.getElementById("pago-id-membresia").value = idMem || "";
   document.getElementById("pago-nombre-usuario").value = `${usuario.nombre} (CC: ${usuario.cedula})`;
   document.getElementById("pago-plan-usuario").value = plan;
-  document.getElementById("pago-monto").value = PRECIOS_PLANES[plan] || 80000;
+  // Sin validación de rango forzada: sugiere el valor base o permite libre ingreso según administración
+  document.getElementById("pago-monto").value = PRECIOS_PLANES[plan] !== undefined ? PRECIOS_PLANES[plan] : "";
   document.getElementById("pago-metodo").value = "Efectivo";
 
   abrirModal("modal-pago");
@@ -439,6 +478,11 @@ async function manejarCobroPago(e) {
   const monto = parseFloat(document.getElementById("pago-monto").value);
   const metodo_pago = document.getElementById("pago-metodo").value;
 
+  if (isNaN(monto) || monto < 0) {
+    mostrarToast("Por favor ingrese un monto válido indicado por administración.", "error");
+    return;
+  }
+
   try {
     const res = await fetch(`${API_BASE}/pagos`, {
       method: "POST",
@@ -446,12 +490,13 @@ async function manejarCobroPago(e) {
       body: JSON.stringify({ id_usuario, id_membresia, monto, metodo_pago })
     });
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Error al procesar el pago.");
+    const data = await parsearRespuestaJson(res, "Error al procesar el pago.");
 
     cerrarModal("modal-pago");
     mostrarToast("¡Pago procesado con éxito! Generando comprobante digital...");
-    cargarEstadisticasPagos();
+    
+    // Actualizar simultáneamente estadísticas de pagos y lista de afiliados
+    await Promise.all([cargarEstadisticasPagos(), cargarAfiliados()]);
 
     // Mostrar Comprobante Digital (HU08)
     mostrarComprobanteDigital(data.comprobante);
@@ -500,3 +545,439 @@ function mostrarToast(mensaje, tipo = "success") {
     setTimeout(() => toast.remove(), 300);
   }, 4000);
 }
+
+// ==================== TAB NAVIGATION ====================
+function configurarTabs() {
+  document.querySelectorAll(".tab-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const tab = btn.dataset.tab;
+      document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+      document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById(`panel-${tab}`).classList.add("active");
+      if (tab === "acceso") {
+        cargarEstadisticasAcceso();
+      }
+    });
+  });
+}
+
+// ==================== HU09: VALIDADOR DE ACCESO INSTANTÁNEO ====================
+let accesoActual = null; // Afiliado actualmente validado
+let contadorConsultas = 0;
+let contadorDenegados = 0;
+
+async function cargarEstadisticasAcceso() {
+  try {
+    const res = await fetch(`${API_BASE}/asistencias/historial?fechaInicio=${hoyISO()}&fechaFin=${hoyISO()}`);
+    if (res.ok) {
+      const rows = await res.json();
+      document.getElementById("stat-ingresos-hoy").textContent = rows.length;
+      if (rows.length > 0) {
+        const ultimo = rows[0];
+        const dt = new Date(ultimo.fecha_ingreso);
+        document.getElementById("stat-ultimo-ingreso").textContent =
+          dt.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+      } else {
+        document.getElementById("stat-ultimo-ingreso").textContent = "—";
+      }
+    }
+  } catch (e) {
+    console.warn("Error cargando stats de acceso:", e.message);
+  }
+  document.getElementById("stat-consultas").textContent = contadorConsultas;
+  document.getElementById("stat-denegados").textContent = contadorDenegados;
+}
+
+function hoyISO() {
+  return new Date().toISOString().split("T")[0];
+}
+
+function configurarControlAcceso() {
+  const input = document.getElementById("acceso-cedula-input");
+  const btnValidar = document.getElementById("btn-validar-acceso");
+  const btnRegistrar = document.getElementById("btn-registrar-ingreso");
+  const btnVerificar = document.getElementById("btn-verificar-facial");
+
+  // Validar con Enter
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") validarAcceso();
+  });
+
+  btnValidar.addEventListener("click", validarAcceso);
+  btnRegistrar.addEventListener("click", registrarIngreso);
+  btnVerificar.addEventListener("click", abrirCamara);
+
+  // Cámara
+  document.getElementById("btn-capturar-foto").addEventListener("click", capturarFoto);
+  document.getElementById("btn-cerrar-camara").addEventListener("click", cerrarCamara);
+}
+
+async function validarAcceso() {
+  const cedula = document.getElementById("acceso-cedula-input").value.trim();
+  if (!cedula) {
+    mostrarToast("Por favor ingrese un número de cédula.", "error");
+    return;
+  }
+
+  contadorConsultas++;
+  document.getElementById("stat-consultas").textContent = contadorConsultas;
+
+  const inicio = performance.now();
+  try {
+    const res = await fetch(`${API_BASE}/asistencias/validar/${encodeURIComponent(cedula)}`);
+    const duracion = performance.now() - inicio;
+    console.log(`[RNF-01] Respuesta en ${duracion.toFixed(0)}ms`);
+
+    if (res.status === 404) {
+      mostrarResultadoAcceso(null, cedula);
+      contadorDenegados++;
+      document.getElementById("stat-denegados").textContent = contadorDenegados;
+      return;
+    }
+
+    const usuario = await res.json();
+    if (!res.ok) throw new Error(usuario.error);
+    accesoActual = usuario;
+    mostrarResultadoAcceso(usuario);
+
+    // Si el acceso está denegado, incrementar contador
+    if (usuario.estado_membresia !== "ACTIVO") {
+      contadorDenegados++;
+      document.getElementById("stat-denegados").textContent = contadorDenegados;
+    }
+
+  } catch (err) {
+    mostrarToast(`Error al validar: ${err.message}`, "error");
+  }
+}
+
+function mostrarResultadoAcceso(usuario, cedulaNoEncontrada = null) {
+  const resultBox = document.getElementById("acceso-resultado");
+  const indicator = document.getElementById("acceso-status-indicator");
+  const icon = document.getElementById("acceso-status-icon");
+  const label = document.getElementById("acceso-status-label");
+  const affiliateInfo = document.getElementById("acceso-affiliate-info");
+  const actionZone = document.getElementById("acceso-action-zone");
+  const alertaFoto = document.getElementById("acceso-alerta-foto");
+  const quickHistory = document.getElementById("quick-history");
+
+  // Mostrar el contenedor
+  resultBox.classList.remove("hidden");
+  quickHistory.style.display = "none";
+  document.getElementById("photo-comparison").style.display = "none";
+
+  if (!usuario) {
+    // Afiliado no encontrado
+    indicator.className = "access-status-indicator denegado";
+    icon.textContent = "🚫";
+    label.textContent = "NO ENCONTRADO";
+    affiliateInfo.style.display = "none";
+    actionZone.style.display = "none";
+    alertaFoto.classList.add("hidden");
+    mostrarToast(`No se encontró ningún afiliado con cédula ${cedulaNoEncontrada}.`, "error");
+    return;
+  }
+
+  const estado = usuario.estado_membresia || "SIN MEMBRESÍA";
+  const esPermitido = estado === "ACTIVO";
+  const esSinMembresia = estado === "SIN MEMBRESÍA";
+
+  // Indicator
+  if (esPermitido) {
+    indicator.className = "access-status-indicator permitido";
+    icon.textContent = "✅";
+    label.textContent = "ACTIVO — ACCESO PERMITIDO";
+  } else if (esSinMembresia) {
+    indicator.className = "access-status-indicator sin-membresia";
+    icon.textContent = "🔒";
+    label.textContent = "SIN MEMBRESÍA";
+  } else {
+    indicator.className = "access-status-indicator denegado";
+    icon.textContent = "❌";
+    label.textContent = "VENCIDO — ACCESO DENEGADO";
+  }
+
+  // Datos del afiliado (HU10)
+  affiliateInfo.style.display = "flex";
+  actionZone.style.display = esPermitido ? "flex" : "none";
+
+  document.getElementById("acceso-nombre").textContent = usuario.nombre;
+  document.getElementById("acceso-cedula-display").textContent = `CC: ${usuario.cedula}`;
+  document.getElementById("acceso-plan").textContent = usuario.plan_actual || "Sin plan";
+  document.getElementById("acceso-vigencia").textContent = formatearFecha(usuario.fecha_fin_membresia) || "N/A";
+  document.getElementById("acceso-tel").textContent = usuario.telefono || "—";
+
+  // Foto (HU10)
+  const fotoEl = document.getElementById("acceso-foto-perfil");
+  const compareFoto = document.getElementById("compare-perfil");
+
+  if (usuario.foto_url) {
+    fotoEl.src = usuario.foto_url;
+    fotoEl.onerror = () => { fotoEl.src = "https://via.placeholder.com/90x90?text=Sin+foto"; };
+    compareFoto.src = usuario.foto_url;
+    alertaFoto.classList.add("hidden");
+  } else {
+    fotoEl.src = "https://via.placeholder.com/90x90?text=Sin+foto";
+    compareFoto.src = "";
+    alertaFoto.classList.remove("hidden"); // HU10: alerta sin foto
+  }
+
+  // Cargar historial rápido
+  cargarHistorialRapido(usuario.id);
+}
+
+async function cargarHistorialRapido(idUsuario) {
+  try {
+    const res = await fetch(`${API_BASE}/asistencias/historial?termino=&fechaInicio=&fechaFin=`);
+    // Filtramos client-side para mostrar solo los últimos 5 del usuario
+    const all = await res.json();
+    const del_usuario = all.filter(r => r.id_usuario === idUsuario).slice(0, 5);
+
+    const quickHistory = document.getElementById("quick-history");
+    const list = document.getElementById("quick-history-list");
+
+    if (del_usuario.length > 0) {
+      quickHistory.style.display = "block";
+      list.innerHTML = del_usuario.map(r => {
+        const dt = new Date(r.fecha_ingreso);
+        const fechaStr = dt.toLocaleDateString("es-CO") + " " + dt.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+        return `<div class="quick-history-item">
+          <span class="qh-date">${fechaStr}</span>
+          <span class="qh-badge">${r.estado_ingreso}</span>
+        </div>`;
+      }).join("");
+    }
+  } catch (e) {
+    console.warn("Error cargando historial rápido:", e.message);
+  }
+}
+
+// HU11: Registrar ingreso con timestamp automático
+async function registrarIngreso() {
+  if (!accesoActual) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/asistencias`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id_usuario: accesoActual.id })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    mostrarToast(`✅ Ingreso registrado: ${accesoActual.nombre} — ${new Date().toLocaleTimeString("es-CO")}`);
+
+    // Actualizar stats
+    cargarEstadisticasAcceso();
+
+    // Limpiar formulario para el siguiente cliente
+    setTimeout(() => {
+      document.getElementById("acceso-cedula-input").value = "";
+      document.getElementById("acceso-resultado").classList.add("hidden");
+      document.getElementById("photo-comparison").style.display = "none";
+      document.getElementById("quick-history").style.display = "none";
+      cerrarCamara();
+      accesoActual = null;
+      document.getElementById("acceso-cedula-input").focus();
+    }, 2500);
+
+  } catch (err) {
+    mostrarToast(`Error al registrar ingreso: ${err.message}`, "error");
+  }
+}
+
+// ==================== HU10: VERIFICACIÓN FACIAL POR CÁMARA ====================
+let streamActivo = null;
+
+async function abrirCamara() {
+  const video = document.getElementById("camera-video");
+  const placeholder = document.getElementById("camera-placeholder");
+  const controls = document.getElementById("camera-controls");
+
+  try {
+    streamActivo = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" }
+    });
+    video.srcObject = streamActivo;
+    video.classList.remove("hidden");
+    placeholder.style.display = "none";
+    controls.style.display = "flex";
+    document.getElementById("photo-comparison").style.display = "none";
+  } catch (err) {
+    mostrarToast(`No se pudo acceder a la cámara: ${err.message}`, "error");
+    console.error("Error cámara:", err);
+  }
+}
+
+function capturarFoto() {
+  const video = document.getElementById("camera-video");
+  const canvas = document.getElementById("camera-canvas");
+  const compareCaptura = document.getElementById("compare-captura");
+  const comparison = document.getElementById("photo-comparison");
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0);
+
+  const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+  compareCaptura.src = dataUrl;
+
+  // Mostrar comparación lado a lado
+  comparison.style.display = "flex";
+
+  // Cerrar cámara después de capturar
+  cerrarCamara();
+
+  mostrarToast("📸 Captura realizada. Compare manualmente las fotos.");
+}
+
+function cerrarCamara() {
+  const video = document.getElementById("camera-video");
+  const placeholder = document.getElementById("camera-placeholder");
+  const controls = document.getElementById("camera-controls");
+
+  if (streamActivo) {
+    streamActivo.getTracks().forEach(t => t.stop());
+    streamActivo = null;
+  }
+
+  video.srcObject = null;
+  video.classList.add("hidden");
+  placeholder.style.display = "";
+  controls.style.display = "none";
+}
+
+// ==================== HU12: HISTORIAL DE ASISTENCIAS ====================
+async function buscarHistorial() {
+  const termino = document.getElementById("hist-buscar").value.trim();
+  const fechaInicio = document.getElementById("hist-fecha-inicio").value;
+  const fechaFin = document.getElementById("hist-fecha-fin").value;
+
+  const params = new URLSearchParams();
+  if (termino) params.set("termino", termino);
+  if (fechaInicio) params.set("fechaInicio", fechaInicio);
+  if (fechaFin) params.set("fechaFin", fechaFin);
+
+  try {
+    const res = await fetch(`${API_BASE}/asistencias/historial?${params.toString()}`);
+    if (!res.ok) throw new Error("Error al obtener historial");
+    const rows = await res.json();
+    renderizarHistorial(rows);
+  } catch (err) {
+    mostrarToast(`Error al buscar historial: ${err.message}`, "error");
+  }
+}
+
+function renderizarHistorial(rows) {
+  const tbody = document.getElementById("historial-tbody");
+  const countEl = document.getElementById("historial-count");
+
+  if (!rows || rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" class="table-empty">No se encontraron asistencias con los filtros aplicados.</td></tr>`;
+    countEl.style.display = "none";
+    return;
+  }
+
+  tbody.innerHTML = rows.map((r, i) => {
+    const dt = new Date(r.fecha_ingreso);
+    const fechaStr = dt.toLocaleDateString("es-CO", {
+      year: "numeric", month: "2-digit", day: "2-digit"
+    });
+    const horaStr = dt.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+    return `
+      <tr>
+        <td style="color: var(--text-muted);">${i + 1}</td>
+        <td>
+          <div style="font-weight:600;">${fechaStr}</div>
+          <div style="font-size:0.78rem; color: var(--text-muted);">${horaStr}</div>
+        </td>
+        <td style="font-weight:600;">${r.nombre}</td>
+        <td style="font-family:monospace; color:#a5b4fc;">${r.cedula}</td>
+        <td><span class="table-badge-permitido">${r.estado_ingreso}</span></td>
+      </tr>
+    `;
+  }).join("");
+
+  countEl.style.display = "block";
+  countEl.textContent = `Se encontraron ${rows.length} registro(s).`;
+}
+
+function configurarFiltrosHistorial() {
+  document.getElementById("btn-buscar-historial").addEventListener("click", buscarHistorial);
+  document.getElementById("hist-buscar").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") buscarHistorial();
+  });
+
+  // Presets de fechas
+  document.getElementById("btn-filtro-hoy").addEventListener("click", () => {
+    const hoy = hoyISO();
+    document.getElementById("hist-fecha-inicio").value = hoy;
+    document.getElementById("hist-fecha-fin").value = hoy;
+    buscarHistorial();
+  });
+
+  document.getElementById("btn-filtro-semana").addEventListener("click", () => {
+    const hoy = new Date();
+    const lunes = new Date(hoy);
+    lunes.setDate(hoy.getDate() - hoy.getDay() + 1);
+    document.getElementById("hist-fecha-inicio").value = lunes.toISOString().split("T")[0];
+    document.getElementById("hist-fecha-fin").value = hoy.toISOString().split("T")[0];
+    buscarHistorial();
+  });
+
+  document.getElementById("btn-filtro-mes").addEventListener("click", () => {
+    const hoy = new Date();
+    const inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split("T")[0];
+    document.getElementById("hist-fecha-inicio").value = inicio;
+    document.getElementById("hist-fecha-fin").value = hoyISO();
+    buscarHistorial();
+  });
+
+  document.getElementById("btn-filtro-mes-ant").addEventListener("click", () => {
+    const hoy = new Date();
+    const primerDiaMesAnt = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+    const ultimoDiaMesAnt = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
+    document.getElementById("hist-fecha-inicio").value = primerDiaMesAnt.toISOString().split("T")[0];
+    document.getElementById("hist-fecha-fin").value = ultimoDiaMesAnt.toISOString().split("T")[0];
+    buscarHistorial();
+  });
+
+  // Exportar CSV
+  document.getElementById("btn-exportar-historial").addEventListener("click", exportarCSV);
+}
+
+function exportarCSV() {
+  const rows = document.querySelectorAll("#historial-tbody tr");
+  if (rows.length === 0 || rows[0].querySelector(".table-empty")) {
+    mostrarToast("No hay datos para exportar. Realice una búsqueda primero.", "error");
+    return;
+  }
+
+  const encabezados = ["#", "Fecha", "Hora", "Afiliado", "Cédula", "Estado"];
+  const lineas = [encabezados.join(",")];
+
+  rows.forEach((tr, i) => {
+    const celdas = tr.querySelectorAll("td");
+    if (celdas.length < 5) return;
+    const num = celdas[0].textContent.trim();
+    const fecha = celdas[1].children[0]?.textContent.trim() || "";
+    const hora = celdas[1].children[1]?.textContent.trim() || "";
+    const nombre = `"${celdas[2].textContent.trim()}"`;
+    const cedula = celdas[3].textContent.trim();
+    const estado = celdas[4].textContent.trim();
+    lineas.push([num, fecha, hora, nombre, cedula, estado].join(","));
+  });
+
+  const blob = new Blob([lineas.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `asistencias_${hoyISO()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  mostrarToast("📤 CSV exportado exitosamente.");
+}

@@ -11,8 +11,8 @@ exports.registrarPago = (req, res) => {
   }
 
   const montoNumerico = parseFloat(monto);
-  if (isNaN(montoNumerico) || montoNumerico <= 0) {
-    return res.status(400).json({ error: 'El monto a cobrar debe ser un valor numérico positivo mayor a 0.' });
+  if (isNaN(montoNumerico) || montoNumerico < 0) {
+    return res.status(400).json({ error: 'El monto a cobrar debe ser un valor numérico válido.' });
   }
 
   if (!metodo_pago || !METODOS_PERMITIDOS.includes(metodo_pago)) {

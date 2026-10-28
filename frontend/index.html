@@ -1,14 +1,17 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ControlGym - FitZone Popayán | Gestión de Afiliados y Membresías</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
 
   <!-- Barra de Navegación -->
@@ -17,7 +20,7 @@
       <div class="brand-logo">⚡</div>
       <div class="brand-text">
         <h1>FitZone Popayán</h1>
-        <p>ControlGym &bull; Épica 2: Afiliados y Membresías</p>
+        <p>ControlGym &bull; Sistema Integral de Gestión</p>
       </div>
     </div>
     <div class="header-actions">
@@ -28,67 +31,278 @@
     </div>
   </header>
 
+  <!-- Tabs de Navegación -->
+  <nav class="main-tabs">
+    <button class="tab-btn active" data-tab="afiliados" id="tab-afiliados">👥 Afiliados y Membresías</button>
+    <button class="tab-btn" data-tab="acceso" id="tab-acceso">🔐 Control de Acceso</button>
+  </nav>
+
   <!-- Contenedor Principal -->
   <main class="container">
-    
-    <!-- Fila de Estadísticas Rápidas -->
-    <section class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-info">
-          <h3>Total Afiliados</h3>
-          <div class="stat-value" id="stat-total-afiliados">0</div>
-        </div>
-        <div class="stat-icon green">👥</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-info">
-          <h3>Membresías Activas</h3>
-          <div class="stat-value" id="stat-activas">0</div>
-        </div>
-        <div class="stat-icon blue">💳</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-info">
-          <h3>Sin Plan / Vencidas</h3>
-          <div class="stat-value" id="stat-vencidas">0</div>
-        </div>
-        <div class="stat-icon amber">⏳</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-info">
-          <h3>Pagos Procesados</h3>
-          <div class="stat-value" id="stat-total-pagos">$0</div>
-        </div>
-        <div class="stat-icon purple">🧾</div>
-      </div>
-    </section>
 
-    <!-- Barra Centralizada de Búsqueda y Acciones (HU06) -->
-    <section class="toolbar">
-      <div class="search-box">
-        <span class="search-icon">🔍</span>
-        <input 
-          type="text" 
-          id="input-busqueda" 
-          class="search-input" 
-          placeholder="Buscar clientes por cédula o nombre en tiempo real..."
-          autocomplete="off"
-        >
-        <button id="btn-limpiar-busqueda" class="btn-clear-search">&times;</button>
-      </div>
-      <button id="btn-abrir-registro" class="btn btn-primary">
-        <span>+</span> Registrar Nuevo Afiliado
-      </button>
-    </section>
+    <!-- ===================== PESTAÑA: AFILIADOS ===================== -->
+    <div id="panel-afiliados" class="tab-panel active">
 
-    <!-- Lista / Cuadrícula de Afiliados (HU06) -->
-    <section id="contenedor-afiliados" class="affiliates-grid">
-      <div class="empty-state">
-        <div class="empty-icon">⏳</div>
-        <h3>Cargando afiliados...</h3>
-        <p>Obteniendo registros del sistema FitZone Popayán.</p>
+      <!-- Fila de Estadísticas Rápidas -->
+      <section class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-info">
+            <h3>Total Afiliados</h3>
+            <div class="stat-value" id="stat-total-afiliados">0</div>
+          </div>
+          <div class="stat-icon green">👥</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-info">
+            <h3>Membresías Activas</h3>
+            <div class="stat-value" id="stat-activas">0</div>
+          </div>
+          <div class="stat-icon blue">💳</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-info">
+            <h3>Sin Plan / Vencidas</h3>
+            <div class="stat-value" id="stat-vencidas">0</div>
+          </div>
+          <div class="stat-icon amber">⏳</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-info">
+            <h3>Pagos Procesados</h3>
+            <div class="stat-value" id="stat-total-pagos">$0</div>
+          </div>
+          <div class="stat-icon purple">🧾</div>
+        </div>
+      </section>
+
+      <!-- Barra Centralizada de Búsqueda y Acciones (HU06) -->
+      <section class="toolbar">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="input-busqueda" class="search-input"
+            placeholder="Buscar clientes por cédula o nombre en tiempo real..." autocomplete="off">
+          <button id="btn-limpiar-busqueda" class="btn-clear-search">&times;</button>
+        </div>
+        <button id="btn-abrir-registro" class="btn btn-primary">
+          <span>+</span> Registrar Nuevo Afiliado
+        </button>
+      </section>
+
+      <!-- Lista / Cuadrícula de Afiliados (HU06) -->
+      <section id="contenedor-afiliados" class="affiliates-grid">
+        <div class="empty-state">
+          <div class="empty-icon">⏳</div>
+          <h3>Cargando afiliados...</h3>
+          <p>Obteniendo registros del sistema FitZone Popayán.</p>
+        </div>
+      </section>
+
+    </div><!-- /panel-afiliados -->
+
+    <!-- ===================== PESTAÑA: CONTROL DE ACCESO ===================== -->
+    <div id="panel-acceso" class="tab-panel">
+
+      <!-- Stats de acceso -->
+      <section class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-info">
+            <h3>Ingresos Hoy</h3>
+            <div class="stat-value" id="stat-ingresos-hoy">0</div>
+          </div>
+          <div class="stat-icon green">🚪</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-info">
+            <h3>Último Ingreso</h3>
+            <div class="stat-value" id="stat-ultimo-ingreso" style="font-size:1.1rem;">—</div>
+          </div>
+          <div class="stat-icon blue">🕐</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-info">
+            <h3>Consultas Realizadas</h3>
+            <div class="stat-value" id="stat-consultas">0</div>
+          </div>
+          <div class="stat-icon amber">🔎</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-info">
+            <h3>Accesos Denegados</h3>
+            <div class="stat-value" id="stat-denegados">0</div>
+          </div>
+          <div class="stat-icon purple">🚫</div>
+        </div>
+      </section>
+
+      <!-- Layout principal de acceso -->
+      <div class="access-layout">
+
+        <!-- Panel izquierdo: Validador de cédula (HU09) -->
+        <div class="access-validator-panel">
+          <div class="panel-header">
+            <span class="panel-icon">🪪</span>
+            <h2>Validador de Acceso</h2>
+            <p>Ingrese la cédula del cliente</p>
+          </div>
+
+          <div class="cedula-input-group">
+            <input type="text" id="acceso-cedula-input" class="cedula-big-input"
+              placeholder="Ej: 1061987654"
+              autocomplete="off" maxlength="15"
+              aria-label="Número de cédula para validar acceso">
+            <button id="btn-validar-acceso" class="btn btn-primary btn-validate">
+              <span>🔍</span> Validar Acceso
+            </button>
+          </div>
+
+          <!-- Indicador de resultado (HU09) -->
+          <div id="acceso-resultado" class="access-result-box hidden">
+            <div class="access-status-indicator" id="acceso-status-indicator">
+              <div class="access-status-icon" id="acceso-status-icon"></div>
+              <div class="access-status-label" id="acceso-status-label">—</div>
+            </div>
+
+            <!-- Datos del afiliado + foto (HU10) -->
+            <div class="access-affiliate-info" id="acceso-affiliate-info">
+              <div class="access-photo-zone">
+                <img id="acceso-foto-perfil" src="" alt="Foto perfil" class="access-profile-photo">
+                <div class="access-photo-label">📁 Foto Registrada</div>
+              </div>
+              <div class="access-data">
+                <div class="access-data-name" id="acceso-nombre">—</div>
+                <div class="access-data-cedula" id="acceso-cedula-display">—</div>
+                <div class="access-data-row">
+                  <span>Plan:</span><strong id="acceso-plan">—</strong>
+                </div>
+                <div class="access-data-row">
+                  <span>Vigencia:</span><strong id="acceso-vigencia">—</strong>
+                </div>
+                <div class="access-data-row">
+                  <span>Teléfono:</span><strong id="acceso-tel">—</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- Botón de registrar ingreso -->
+            <div id="acceso-action-zone" class="access-action-zone">
+              <button id="btn-registrar-ingreso" class="btn btn-primary" style="width:100%;">
+                ✅ Registrar Ingreso
+              </button>
+              <button id="btn-verificar-facial" class="btn btn-secondary" style="width:100%; margin-top:0.5rem;">
+                📷 Verificar Identidad (Cámara)
+              </button>
+            </div>
+
+          </div>
+
+          <!-- No photo alert (HU10) -->
+          <div id="acceso-alerta-foto" class="access-no-photo-alert hidden">
+            ⚠️ Este afiliado no tiene fotografía registrada. Verifique la identidad manualmente.
+          </div>
+        </div>
+
+        <!-- Panel derecho: Verificación Facial (HU10) + última asistencia -->
+        <div class="access-camera-panel" id="camera-panel">
+          <div class="panel-header">
+            <span class="panel-icon">📷</span>
+            <h2>Verificación de Identidad</h2>
+            <p>Compare la foto del sistema con la persona presente</p>
+          </div>
+
+          <div class="camera-container" id="camera-container">
+            <div class="camera-placeholder" id="camera-placeholder">
+              <div class="camera-placeholder-icon">📷</div>
+              <p>Cámara inactiva</p>
+              <p style="font-size:0.78rem; color:#6b7280;">La cámara se activa al presionar<br>"Verificar Identidad"</p>
+            </div>
+            <video id="camera-video" class="camera-video hidden" autoplay muted playsinline></video>
+            <canvas id="camera-canvas" class="hidden"></canvas>
+          </div>
+
+          <div class="camera-controls" id="camera-controls" style="display:none;">
+            <button id="btn-capturar-foto" class="btn btn-primary" style="flex:1;">📸 Capturar para Comparar</button>
+            <button id="btn-cerrar-camara" class="btn btn-secondary">✖ Cerrar</button>
+          </div>
+
+          <!-- Comparación lado a lado -->
+          <div class="photo-comparison" id="photo-comparison" style="display:none;">
+            <div class="compare-slot">
+              <img id="compare-perfil" src="" alt="Foto Sistema" class="compare-img">
+              <p>📁 Sistema</p>
+            </div>
+            <div class="compare-vs">VS</div>
+            <div class="compare-slot">
+              <img id="compare-captura" src="" alt="Captura Cámara" class="compare-img">
+              <p>📷 Presente</p>
+            </div>
+          </div>
+
+          <!-- Historial rápido -->
+          <div class="quick-history" id="quick-history" style="display:none;">
+            <h4>Últimos 5 ingresos de este afiliado</h4>
+            <div id="quick-history-list"></div>
+          </div>
+        </div>
+
+      </div><!-- /access-layout -->
+
+      <!-- Sección Historial de Asistencias (HU12) -->
+      <div class="history-section">
+        <div class="history-header">
+          <div>
+            <h2>📋 Historial de Asistencias</h2>
+            <p style="color: var(--text-muted); font-size:0.85rem;">Consulte el histórico de ingresos por afiliado y rango de fechas</p>
+          </div>
+          <button id="btn-exportar-historial" class="btn btn-secondary">📤 Exportar CSV</button>
+        </div>
+
+        <!-- Filtros (HU12) -->
+        <div class="history-filters">
+          <div class="search-box" style="flex:1;">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="hist-buscar" class="search-input"
+              placeholder="Buscar por cédula o nombre..." autocomplete="off">
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Desde:</label>
+            <input type="date" id="hist-fecha-inicio" class="form-input" style="width:auto;">
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Hasta:</label>
+            <input type="date" id="hist-fecha-fin" class="form-input" style="width:auto;">
+          </div>
+          <div class="filter-group">
+            <button id="btn-filtro-hoy" class="btn btn-secondary btn-sm">Hoy</button>
+            <button id="btn-filtro-semana" class="btn btn-secondary btn-sm">Esta semana</button>
+            <button id="btn-filtro-mes" class="btn btn-secondary btn-sm">Este mes</button>
+            <button id="btn-filtro-mes-ant" class="btn btn-secondary btn-sm">Mes anterior</button>
+          </div>
+          <button id="btn-buscar-historial" class="btn btn-primary">
+            🔍 Buscar
+          </button>
+        </div>
+
+        <!-- Tabla historial -->
+        <div class="history-table-wrapper">
+          <table class="history-table" id="tabla-historial">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Fecha y Hora</th>
+                <th>Afiliado</th>
+                <th>Cédula</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="historial-tbody">
+              <tr><td colspan="5" class="table-empty">Use los filtros para consultar asistencias.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="historial-count" class="historial-count" style="display:none;"></div>
       </div>
-    </section>
+
+    </div><!-- /panel-acceso -->
 
   </main>
 
@@ -114,20 +328,25 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="reg-telefono">Teléfono (Formato Internacional) <span class="required">*</span></label>
+          <label class="form-label" for="reg-telefono">Teléfono (Formato Internacional) <span
+              class="required">*</span></label>
           <input type="tel" id="reg-telefono" class="form-input" placeholder="Ej: +573123456789" required>
           <div class="form-hint">Debe iniciar con '+' y código de país (ej. +57 para Colombia).</div>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="reg-contacto-emergencia">Contacto de Emergencia <span class="required">*</span></label>
-          <input type="text" id="reg-contacto-emergencia" class="form-input" placeholder="Ej: Mamá (+573104567890)" required>
+          <label class="form-label" for="reg-contacto-emergencia">Contacto de Emergencia <span
+              class="required">*</span></label>
+          <input type="text" id="reg-contacto-emergencia" class="form-input" placeholder="Ej: Mamá (+573104567890)"
+            required>
         </div>
 
         <div class="form-group">
           <label class="form-label">Fotografía del Afiliado <span class="required">*</span></label>
           <div class="photo-uploader-box">
-            <img id="reg-foto-preview" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" alt="Vista previa" class="photo-preview-img">
+            <img id="reg-foto-preview"
+              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
+              alt="Vista previa" class="photo-preview-img">
             <div class="photo-uploader-controls">
               <input type="file" id="reg-foto-file" accept="image/*" class="form-input" style="padding: 0.4rem;">
               <input type="text" id="reg-foto-url" class="form-input" placeholder="O pega una URL de foto directa">
@@ -165,12 +384,14 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="edit-telefono">Teléfono (Formato Internacional) <span class="required">*</span></label>
+          <label class="form-label" for="edit-telefono">Teléfono (Formato Internacional) <span
+              class="required">*</span></label>
           <input type="tel" id="edit-telefono" class="form-input" required>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="edit-contacto-emergencia">Contacto de Emergencia <span class="required">*</span></label>
+          <label class="form-label" for="edit-contacto-emergencia">Contacto de Emergencia <span
+              class="required">*</span></label>
           <input type="text" id="edit-contacto-emergencia" class="form-input" required>
         </div>
 
@@ -205,7 +426,8 @@
 
         <div class="form-group">
           <label class="form-label">Afiliado Destino</label>
-          <input type="text" id="plan-nombre-usuario" class="form-input" disabled style="opacity: 0.8; font-weight: bold;">
+          <input type="text" id="plan-nombre-usuario" class="form-input" disabled
+            style="opacity: 0.8; font-weight: bold;">
         </div>
 
         <div class="form-group">
@@ -254,7 +476,8 @@
 
         <div class="form-group">
           <label class="form-label">Afiliado</label>
-          <input type="text" id="pago-nombre-usuario" class="form-input" disabled style="opacity: 0.8; font-weight: bold;">
+          <input type="text" id="pago-nombre-usuario" class="form-input" disabled
+            style="opacity: 0.8; font-weight: bold;">
         </div>
 
         <div class="form-group">
@@ -341,7 +564,8 @@
           </div>
         </div>
 
-        <div class="receipt-print-actions" style="display: flex; justify-content: flex-end; gap: 0.8rem; margin-top: 1.5rem;">
+        <div class="receipt-print-actions"
+          style="display: flex; justify-content: flex-end; gap: 0.8rem; margin-top: 1.5rem;">
           <button type="button" class="btn btn-secondary" data-close="modal-comprobante">Cerrar</button>
           <button type="button" class="btn btn-primary" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
         </div>
@@ -354,4 +578,5 @@
 
   <script src="script.js"></script>
 </body>
+
 </html>
