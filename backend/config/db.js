@@ -60,12 +60,41 @@ db.serialize(() => {
       metodo_pago VARCHAR(20) NOT NULL CHECK (metodo_pago IN ('Efectivo', 'Tarjeta', 'Transferencia')),
       fecha_pago TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (id_usuario) REFERENCES usuario(id) ON DELETE CASCADE,
-      FOREIGN KEY (id_membresia) REFERENCES membresia(id) ON DELETE CASCADE
+      FOREIGN KEY (id_membresia) REFERENCES membresia(id) ON DELETE SET NULL
     )
   `, () => {
     // Migración segura por si la tabla ya existía sin id_usuario
     db.run(`ALTER TABLE pago ADD COLUMN id_usuario INTEGER REFERENCES usuario(id);`, () => {
       db.run(`CREATE INDEX IF NOT EXISTS idx_pago_usuario ON pago(id_usuario)`);
+    });
+
+    // Migración segura por si id_membresia tenía restricción NOT NULL en versiones previas
+    db.all(`PRAGMA table_info(pago)`, [], (errCols, cols) => {
+      if (!errCols && cols) {
+        const colMembresia = cols.find(c => c.name === 'id_membresia');
+        if (colMembresia && colMembresia.notnull === 1) {
+          db.serialize(() => {
+            db.run(`PRAGMA foreign_keys = OFF;`);
+            db.run(`CREATE TABLE IF NOT EXISTS pago_migrado (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              id_usuario INTEGER,
+              id_membresia INTEGER,
+              monto DECIMAL(10, 2) NOT NULL,
+              metodo_pago VARCHAR(20) NOT NULL CHECK (metodo_pago IN ('Efectivo', 'Tarjeta', 'Transferencia')),
+              fecha_pago TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (id_usuario) REFERENCES usuario(id) ON DELETE CASCADE,
+              FOREIGN KEY (id_membresia) REFERENCES membresia(id) ON DELETE SET NULL
+            )`);
+            db.run(`INSERT INTO pago_migrado (id, id_usuario, id_membresia, monto, metodo_pago, fecha_pago)
+                    SELECT id, id_usuario, id_membresia, monto, metodo_pago, fecha_pago FROM pago`);
+            db.run(`DROP TABLE pago`);
+            db.run(`ALTER TABLE pago_migrado RENAME TO pago`);
+            db.run(`CREATE INDEX IF NOT EXISTS idx_pago_usuario ON pago(id_usuario)`);
+            db.run(`CREATE INDEX IF NOT EXISTS idx_pago_fecha ON pago(fecha_pago)`);
+            db.run(`PRAGMA foreign_keys = ON;`);
+          });
+        }
+      }
     });
   });
 

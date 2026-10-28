@@ -18,7 +18,11 @@ const UsuarioModel = {
       SELECT u.*, 
              m.id AS id_membresia,
              m.tipo_plan AS plan_actual, 
-             m.estado AS estado_membresia,
+             CASE 
+               WHEN m.estado IS NULL THEN 'SIN MEMBRESÍA'
+               WHEN date(m.fecha_fin) < date('now') THEN 'VENCIDO'
+               ELSE m.estado 
+             END AS estado_membresia,
              m.fecha_inicio AS fecha_inicio_membresia,
              m.fecha_fin AS fecha_fin_membresia
       FROM usuario u
