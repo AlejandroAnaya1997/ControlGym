@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:3000";
+const API_BASE = "/api";
 
 let listaAfiliados = [];
 let debounceTimer = null;
@@ -980,4 +980,4 @@ function exportarCSV() {
   a.click();
   URL.revokeObjectURL(url);
   mostrarToast("📤 CSV exportado exitosamente.");
-}
+}
