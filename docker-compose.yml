@@ -13,7 +13,7 @@ services:
     build: ./frontend
     container_name: controlgym_frontend
     ports:
-      - "8082:80"
+      - "8084:80"
     volumes:
       - ./frontend:/usr/share/nginx/html
     depends_on:
